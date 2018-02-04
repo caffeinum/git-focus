@@ -1,0 +1,80 @@
+#!/bin/sh
+
+if [[ ! -z $1 ]]; then
+	MODE=$1
+elif [[ ! -z $MODE ]]; then
+	MODE=$MODE
+else
+	echo MODE env not set, using default
+	MODE="hotfix"
+fi
+
+# check only staged on --staged
+
+echo MODE=$MODE
+
+
+function modified () {
+	IFS=$'\n' modified_arr=( $(git status -s | grep "^\s*M") )
+
+	i=0
+	for str in "${modified_arr[@]}"; do
+		i=$((i+1));
+	done
+
+	echo $i
+}
+
+
+function created () {
+	IFS=$'\n' created_arr=(  $(git status -s | grep "^[A|(\?\?)]") )
+
+	i=0
+	for str in "${created_arr[@]}"; do
+		i=$((i+1))
+	done
+	
+	echo $i
+}
+
+function check_modified() {
+	condition=$1
+	counter=$(modified)
+	echo Check $counter \> $condition for modified
+	if [ $counter -gt $condition ]; then
+		echo ERROR: More than $condition files are modified
+		exit 1
+	fi
+}
+
+function check_created() {
+	condition=$1
+	counter=$(created)
+	echo Check $counter \> $condition for created
+	
+	if [ $counter -gt $condition ]; then
+		echo ERROR: More than $condition files are created
+		exit 1;
+	fi
+}
+
+
+
+case $MODE in
+"hotfix")
+	check_modified 2
+	check_created 0
+	;;
+"refactor")
+	check_created 0
+	;;
+"feature")
+	check_modified 0
+	check_created 5
+	;;
+*)
+	check_modified 5
+	check_created 5
+	
+esac
+
